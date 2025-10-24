@@ -6,7 +6,7 @@ canvas.height = innerHeight;
 const bursts = [];
 let clickCount = 0;
 
-// === Audio setup ===
+// ==== AUDIO ====
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 const masterGain = audioCtx.createGain();
 masterGain.connect(audioCtx.destination);
@@ -38,31 +38,42 @@ function playTone(freq) {
   osc.stop(audioCtx.currentTime + 1.3);
 }
 
+// ==== COLOR MAP ====
+function frequencyToColor(freq) {
+  // Map each piano frequency to a unique hue range
+  const baseHue = (Math.log(freq) * 137.508) % 360; // quasi-random hue spread
+  const sat = 70 + Math.random() * 30;
+  const light = 50 + Math.random() * 10;
+  return { hue: baseHue, sat, light };
+}
+
+// ==== VISUAL ====
 canvas.addEventListener('click', e => {
   const freqs = [220, 261.63, 293.66, 329.63, 349.23, 392, 440, 493.88, 523.25];
   const freq = freqs[Math.floor(Math.random() * freqs.length)];
   playTone(freq);
-  createBurst(e.clientX, e.clientY, freq);
+  const color = frequencyToColor(freq);
+  createBurst(e.clientX, e.clientY, color);
 });
 
-function createBurst(x, y, freq) {
+function createBurst(x, y, color) {
   clickCount++;
-  const hue = (freq / 880) * 360;
-  const brightness = clickCount % 3 === 0 ? 0.6 : 1;
   const burst = {
     x, y,
-    hue,
-    brightness,
+    hue: color.hue,
+    sat: color.sat,
+    light: color.light,
     born: performance.now(),
     life: 5000,
     radius: 0,
-    maxRadius: 180 + Math.random() * 100,
-    tendrils: [],
+    maxRadius: 200 + Math.random() * 120,
+    tendrils: []
   };
-  for (let i = 0; i < 8 + Math.random() * 5; i++) {
+  for (let i = 0; i < 10 + Math.random() * 8; i++) {
     burst.tendrils.push({
-      angle: (Math.PI * 2 * i) / 8,
-      jitter: Math.random() * 0.5 - 0.25
+      angle: (Math.PI * 2 * i) / 10,
+      jitter: Math.random() * 0.5 - 0.25,
+      length: 0
     });
   }
   bursts.push(burst);
@@ -73,22 +84,30 @@ function drawBurst(b, now) {
   const t = age / b.life;
   if (t >= 1) return false;
 
-  // Fade in/out timing
-  const alpha = t < 0.2 ? t / 0.2 : t > 0.8 ? (1 - t) / 0.2 : 1;
-  const radius = t < 0.5
-    ? b.maxRadius * (t / 0.5)
-    : b.maxRadius * (1 - (t - 0.5) / 0.5);
+  // Ease in/out + radius growth
+  const fadeIn = Math.min(t / 0.2, 1);
+  const fadeOut = Math.max(0, 1 - (t - 0.6) / 0.4);
+  const alpha = Math.min(fadeIn * fadeOut, 1);
+  const radius = t < 0.5 ? b.maxRadius * (t / 0.5) : b.maxRadius * (1 - (t - 0.5) / 0.5);
 
-  const color = `hsla(${b.hue}, 80%, ${55 * b.brightness}%, ${alpha * 0.7})`;
-  ctx.strokeStyle = color;
+  // Multi-hue lightning gradient
+  const grad = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, radius);
+  grad.addColorStop(0, `hsla(${b.hue}, ${b.sat}%, ${b.light + 15}%, ${alpha})`);
+  grad.addColorStop(0.5, `hsla(${(b.hue + 90) % 360}, ${b.sat}%, ${b.light}%, ${alpha * 0.7})`);
+  grad.addColorStop(1, `hsla(${(b.hue + 180) % 360}, ${b.sat}%, 10%, 0)`);
+
+  ctx.strokeStyle = `hsla(${b.hue}, ${b.sat}%, ${b.light}%, ${alpha})`;
   ctx.lineWidth = 1.5;
+
   ctx.beginPath();
   ctx.arc(b.x, b.y, radius, 0, Math.PI * 2);
   ctx.stroke();
 
+  // Draw tendrils with electric-like pulse
   for (const tdr of b.tendrils) {
     const tx = b.x + Math.cos(tdr.angle) * radius;
     const ty = b.y + Math.sin(tdr.angle) * radius;
+    ctx.strokeStyle = grad;
     ctx.beginPath();
     ctx.moveTo(b.x, b.y);
     ctx.lineTo(tx, ty);
@@ -99,10 +118,8 @@ function drawBurst(b, now) {
 }
 
 function animate() {
-  // Black fade ensures absolute clearing
-  ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+  ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
   const now = performance.now();
   for (let i = bursts.length - 1; i >= 0; i--) {
     const alive = drawBurst(bursts[i], now);
