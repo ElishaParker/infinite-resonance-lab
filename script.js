@@ -112,7 +112,7 @@ function drawBurst(b, now) {
     ctx.moveTo(b.x, b.y);
     ctx.lineTo(tx, ty);
     ctx.stroke();
-    tdr.angle += tdr.jitter * 0.05;
+    tdr.angle += tdr.jitter * 0.33;
   }
   return true;
 }
