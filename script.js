@@ -3,133 +3,89 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-ctx.globalCompositeOperation = 'lighter';
-let fadeOpacity = 0.1; // adjust for trail length
-
-function clearCanvas() {
-  ctx.fillStyle = `rgba(0,0,0,${fadeOpacity})`;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-}
-
-// === Audio Setup ===
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-const masterGain = audioCtx.createGain();
+let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let masterGain = audioCtx.createGain();
 masterGain.connect(audioCtx.destination);
 
-const lfoOsc = audioCtx.createOscillator();
-const lfoGain = audioCtx.createGain();
+let lfoOsc = audioCtx.createOscillator();
+let lfoGain = audioCtx.createGain();
 lfoOsc.connect(lfoGain);
 lfoGain.connect(masterGain.gain);
-lfoGain.gain.value = 0.25;
-lfoOsc.frequency.value = 0.2;
+lfoGain.gain.value = 0.15;
 lfoOsc.start();
 
-document.getElementById('volume').addEventListener('input', (e) => {
+document.getElementById('volumeSlider').addEventListener('input', e => {
   masterGain.gain.value = e.target.value;
 });
-document.getElementById('lfo').addEventListener('input', (e) => {
-  lfoGain.gain.value = e.target.value;
+document.getElementById('lfoSlider').addEventListener('input', e => {
+  lfoOsc.frequency.value = e.target.value;
 });
 
-// === Burst Data ===
-const bursts = [];
+let zoom = 1, cx = -0.7, cy = 0, hue = 0;
+let t = 0; // time for breathing zoom loop
 
-function playTone(freq) {
+function drawMandelbrotAsync() {
+  const img = ctx.createImageData(canvas.width, canvas.height);
+  const data = img.data;
+  const maxIter = 70;
+  const zoomFactor = 1 / zoom;
+  let y = 0;
+
+  function drawRow() {
+    const start = performance.now();
+    while (y < canvas.height && performance.now() - start < 16) {
+      for (let x = 0; x < canvas.width; x++) {
+        let a = (x - canvas.width / 2) * 4 / canvas.width * zoomFactor + cx;
+        let b = (y - canvas.height / 2) * 4 / canvas.width * zoomFactor + cy;
+        const ca = a, cb = b;
+        let n = 0;
+        while (n < maxIter) {
+          const aa = a * a - b * b;
+          const bb = 2 * a * b;
+          a = aa + ca;
+          b = bb + cb;
+          if (a * a + b * b > 16) break;
+          n++;
+        }
+        const pix = (x + y * canvas.width) * 4;
+        const brightness = n === maxIter ? 0 : (n / maxIter) * 100;
+        const color = `hsl(${hue + n * 6},100%,${brightness}%)`;
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, 1, 1);
+      }
+      y++;
+    }
+    if (y < canvas.height) requestAnimationFrame(drawRow);
+    else {
+      hue += 0.8;
+      // breathing zoom effect
+      zoom = 1 + Math.sin(t) * 0.3 + 0.5;
+      t += 0.02;
+      requestAnimationFrame(drawMandelbrotAsync);
+    }
+  }
+  drawRow();
+}
+drawMandelbrotAsync();
+
+canvas.addEventListener('click', () => {
+  const freqs = [261.63, 293.66, 329.63, 349.23, 392, 440, 493.88];
+  const colors = [0, 30, 60, 120, 180, 240, 300];
+  const i = Math.floor(Math.random() * freqs.length);
+  hue = colors[i];
+
   const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
   osc.type = 'sine';
-  osc.frequency.value = freq;
-
+  osc.frequency.value = freqs[i];
+  const gain = audioCtx.createGain();
   gain.gain.setValueAtTime(1, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.2);
-
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
   osc.connect(gain).connect(masterGain);
   osc.start();
-  osc.stop(audioCtx.currentTime + 1.3);
-}
+  osc.stop(audioCtx.currentTime + 1.5);
 
-function createBurst(x, y, freq) {
-  const hue = (freq / 880) * 360;
-  const tendrils = [];
-  const branches = 6 + Math.floor(Math.random() * 8);
-  for (let i = 0; i < branches; i++) {
-    tendrils.push({
-      angle: (i / branches) * Math.PI * 2 + Math.random() * 0.2,
-      path: [{ x, y }],
-    });
-  }
-  bursts.push({
-    x,
-    y,
-    hue,
-    freq,
-    radius: 0,
-    alpha: 0,
-    born: performance.now(),
-    life: 5000,
-    tendrils,
-  });
-}
-
-canvas.addEventListener('click', (e) => {
-  const freqs = [220, 261.63, 293.66, 329.63, 349.23, 392, 440, 493.88, 523.25];
-  const freq = freqs[Math.floor(Math.random() * freqs.length)];
-  playTone(freq);
-  createBurst(e.clientX, e.clientY, freq);
+  // random walk through fractal space
+  cx += (Math.random() - 0.5) * 0.1 / zoom;
+  cy += (Math.random() - 0.5) * 0.1 / zoom;
 });
 
-function drawTendril(t, color, intensity) {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1 + intensity * 2;
-  ctx.beginPath();
-  ctx.moveTo(t.path[0].x, t.path[0].y);
-  for (let i = 1; i < t.path.length; i++) {
-    ctx.lineTo(t.path[i].x, t.path[i].y);
-  }
-  ctx.stroke();
-}
-
-function animate() {
-  clearCanvas();
-  const now = performance.now();
-
-  for (let i = bursts.length - 1; i >= 0; i--) {
-    const b = bursts[i];
-    const age = now - b.born;
-    const lifeRatio = age / b.life;
-
-    if (lifeRatio >= 1) {
-      bursts.splice(i, 1);
-      continue;
-    }
-
-    const fadeIn = Math.min(lifeRatio * 3, 1);
-    const fadeOut = 1 - Math.max(0, (lifeRatio - 0.7) / 0.3);
-    const alpha = fadeIn * fadeOut;
-
-    b.radius += 3;
-    const color = `hsla(${b.hue + now * 0.05}, 100%, 60%, ${alpha})`;
-
-    // Draw circle pulse
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.globalAlpha = alpha;
-    ctx.stroke();
-
-    // Animate tendrils
-    for (const t of b.tendrils) {
-      const last = t.path[t.path.length - 1];
-      const nx = last.x + Math.cos(t.angle) * 6;
-      const ny = last.y + Math.sin(t.angle) * 6;
-      t.path.push({ x: nx, y: ny });
-      if (Math.random() < 0.3) t.angle += (Math.random() - 0.5) * 0.3;
-      drawTendril(t, color, alpha);
-    }
-  }
-
-  ctx.globalAlpha = 1;
-  requestAnimationFrame(animate);
-}
-animate();
