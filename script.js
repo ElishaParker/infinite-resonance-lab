@@ -16,7 +16,7 @@ const lfoGain = audioCtx.createGain();
 lfoOsc.connect(lfoGain);
 lfoGain.connect(masterGain.gain);
 lfoGain.gain.value = 0.2;
-lfoOsc.frequency.value = 60;
+lfoOsc.frequency.value = .1;
 lfoOsc.start();
 
 document.getElementById("volume").addEventListener("input", e => {
