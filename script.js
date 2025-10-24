@@ -42,8 +42,8 @@ function playTone(freq) {
 function frequencyToColor(freq) {
   // Map each piano frequency to a unique hue range
   const baseHue = (Math.log(freq) * 137.508) % 360; // quasi-random hue spread
-  const sat = 70 + Math.random() * 30;
-  const light = 50 + Math.random() * 10;
+  const sat = 70 + Math.random() * 333;
+  const light = 50 + Math.random() * 111;
   return { hue: baseHue, sat, light };
 }
 
