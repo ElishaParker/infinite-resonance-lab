@@ -103,10 +103,4 @@ function update() {
       const ny = last.y + Math.sin(t.angle) * step;
       t.path.push({ x: nx, y: ny });
       if (Math.random() < 0.25) t.angle += (Math.random() - 0.5) * 0.5;
-      drawTendril(t, b.color, b.alpha);
-    }
-  }
-  ctx.globalAlpha = 1.0;
-  requestAnimationFrame(update);
-}
-update();
+      drawTendril(t, b.color, b.al
