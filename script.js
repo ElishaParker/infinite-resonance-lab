@@ -1,4 +1,4 @@
-// ⚡ Infinite Resonance Lightning Engine v3 – Pulsing Spectrum
+// ⚡ Infinite Resonance Lightning Engine v4 — Fluid Fade Version
 // by Elisha Blue Parker & Lennard
 
 const canvas = document.getElementById('fractalCanvas');
@@ -18,7 +18,7 @@ let lfoGain = audioCtx.createGain();
 lfoOsc.connect(lfoGain);
 lfoGain.connect(masterGain.gain);
 lfoGain.gain.value = 0.25;
-lfoOsc.frequency.value = 0.2; // slow breathing pulse
+lfoOsc.frequency.value = 0.2;
 lfoOsc.start();
 
 const bursts = [];
@@ -60,8 +60,9 @@ function createBurst(x, y, freq) {
     freq,
     baseHue,
     radius: 0,
-    alpha: 1,
+    alpha: 0,             // start invisible
     time: Date.now(),
+    lifespan: 5000,       // milliseconds
     hueShift: Math.random() * 360,
     tendrils
   });
@@ -89,11 +90,17 @@ function update() {
 
   for (let i = bursts.length - 1; i >= 0; i--) {
     const b = bursts[i];
+    const elapsed = now - b.time;
+
+    // fade in first second, fade out last second
+    const fadeIn = Math.min(elapsed / 1000, 1);
+    const fadeOut = Math.max(0, 1 - (elapsed - 4000) / 1000);
+    b.alpha = Math.min(fadeIn, fadeOut);
+
     b.radius += 4 + Math.random() * 3;
-    b.alpha -= 0.01;
     b.hueShift += 1.5;
 
-    if (b.alpha <= 0) {
+    if (elapsed > b.lifespan) {
       bursts.splice(i, 1);
       continue;
     }
