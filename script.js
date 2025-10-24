@@ -82,7 +82,7 @@ canvas.addEventListener('click', () => {
   gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
   osc.connect(gain).connect(masterGain);
   osc.start();
-  osc.stop(audioCtx.currentTime + 1.5);
+  osc.stop(audioCtx.currentTime + 3.3);
 
   // random walk through fractal space
   cx += (Math.random() - 0.5) * 0.1 / zoom;
