@@ -19,6 +19,18 @@ lfoOsc.connect(lfoGain);
 lfoGain.connect(masterGain.gain);
 lfoGain.gain.value = 0.25;
 lfoOsc.frequency.value = 0.2;
+// === UI Controls ===
+const volumeSlider = document.getElementById('volume');
+const lfoSlider = document.getElementById('lfo');
+
+volumeSlider.addEventListener('input', () => {
+  masterGain.gain.value = volumeSlider.value;
+});
+
+lfoSlider.addEventListener('input', () => {
+  lfoGain.gain.value = lfoSlider.value;
+});
+
 lfoOsc.start();
 
 const bursts = [];
