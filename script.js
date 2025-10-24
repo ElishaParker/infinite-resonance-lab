@@ -97,7 +97,7 @@ function drawBurst(b, now) {
   grad.addColorStop(1, `hsla(${(b.hue + 180) % 360}, ${b.sat}%, 10%, 0)`);
 
   ctx.strokeStyle = `hsla(${b.hue}, ${b.sat}%, ${b.light}%, ${alpha})`;
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 0.5;
 
   ctx.beginPath();
   ctx.arc(b.x, b.y, radius, 0, Math.PI * 2);
