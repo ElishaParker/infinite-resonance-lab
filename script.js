@@ -4,7 +4,7 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 ctx.globalCompositeOperation = 'lighter';
-let fadeOpacity = 0.12;
+let fadeOpacity = 0.25; // stronger fade veil
 
 function clearCanvas() {
   ctx.fillStyle = `rgba(0,0,0,${fadeOpacity})`;
@@ -31,6 +31,7 @@ document.getElementById('lfo').addEventListener('input', (e) => {
   lfoGain.gain.value = e.target.value;
 });
 
+// === Burst Data ===
 const bursts = [];
 let clickCount = 0;
 
@@ -49,9 +50,9 @@ function playTone(freq) {
 function createBurst(x, y, freq) {
   clickCount++;
   const hue = (freq / 880) * 360;
-  const brightness = clickCount % 3 === 0 ? 0.4 : 1; // every 3rd note dimmer
+  const dimFactor = clickCount % 3 === 0 ? 0.5 : 1; // every 3rd note dimmer
   const tendrils = [];
-  const branches = 6 + Math.floor(Math.random() * 8);
+  const branches = 5 + Math.floor(Math.random() * 7);
   for (let i = 0; i < branches; i++) {
     tendrils.push({
       angle: (i / branches) * Math.PI * 2 + Math.random() * 0.2,
@@ -67,7 +68,8 @@ function createBurst(x, y, freq) {
     alpha: 0,
     born: performance.now(),
     life: 5000,
-    brightness,
+    brightness: dimFactor,
+    saturation: 60 + Math.random() * 20,
     tendrils,
   });
 }
@@ -102,26 +104,28 @@ function animate() {
       continue;
     }
 
-    const fadeIn = Math.min(lifeRatio * 3, 1);
-    const fadeOut = 1 - Math.max(0, (lifeRatio - 0.7) / 0.3);
-    const alpha = fadeIn * fadeOut * b.brightness;
+    const fadeIn = Math.min(lifeRatio * 2, 1);
+    const fadeOut = 1 - Math.max(0, (lifeRatio - 0.6) / 0.4);
+    const alpha = Math.min(fadeIn * fadeOut * b.brightness, 0.8); // clamp alpha
 
-    b.radius += 3;
-    const color = `hsla(${b.hue + now * 0.05}, 100%, ${60 * b.brightness}%, ${alpha})`;
+    b.radius += 2.5;
+    const color = `hsla(${b.hue + now * 0.04}, ${b.saturation}%, ${55 * b.brightness}%, ${alpha})`;
 
+    // Draw main pulse ring
     ctx.beginPath();
     ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.globalAlpha = alpha;
     ctx.stroke();
 
+    // Animate tendrils
     for (const t of b.tendrils) {
       const last = t.path[t.path.length - 1];
-      const nx = last.x + Math.cos(t.angle) * 6;
-      const ny = last.y + Math.sin(t.angle) * 6;
+      const nx = last.x + Math.cos(t.angle) * 5;
+      const ny = last.y + Math.sin(t.angle) * 5;
       t.path.push({ x: nx, y: ny });
-      if (Math.random() < 0.3) t.angle += (Math.random() - 0.5) * 0.3;
+      if (Math.random() < 0.25) t.angle += (Math.random() - 0.5) * 0.3;
       drawTendril(t, color, alpha);
     }
   }
