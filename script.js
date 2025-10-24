@@ -1,4 +1,4 @@
-// ⚡ Infinite Resonance Lightning Engine v2
+// ⚡ Infinite Resonance Lightning Engine v3 – Pulsing Spectrum
 // by Elisha Blue Parker & Lennard
 
 const canvas = document.getElementById('fractalCanvas');
@@ -17,12 +17,12 @@ let lfoOsc = audioCtx.createOscillator();
 let lfoGain = audioCtx.createGain();
 lfoOsc.connect(lfoGain);
 lfoGain.connect(masterGain.gain);
-lfoGain.gain.value = 0.15;
+lfoGain.gain.value = 0.25;
+lfoOsc.frequency.value = 0.2; // slow breathing pulse
 lfoOsc.start();
 
 const bursts = [];
 
-// === AUDIO ENGINE ===
 function playTone(freq) {
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
@@ -38,25 +38,33 @@ function playTone(freq) {
   osc.stop(audioCtx.currentTime + 1.5);
 }
 
-function freqToColor(f) {
-  const hue = (f / 880.0) * 360;
-  const lightness = 60 + Math.sin(f * 0.05) * 10;
-  return `hsl(${hue}, 100%, ${lightness}%)`;
+function dynamicColor(hueShift, baseHue, freq, alpha = 1) {
+  const hue = (baseHue + hueShift + Math.sin(freq * 0.03) * 60) % 360;
+  const saturation = 80 + 20 * Math.sin(freq * 0.01);
+  const lightness = 50 + 25 * Math.sin(Date.now() * 0.002);
+  return `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
 }
 
-// === VISUAL ENGINE ===
 function createBurst(x, y, freq) {
-  const color = freqToColor(freq);
+  const baseHue = (freq / 880.0) * 360;
   const tendrils = [];
   const branches = 6 + Math.floor(Math.random() * 10);
   for (let i = 0; i < branches; i++) {
     tendrils.push({
       angle: (i / branches) * Math.PI * 2 + Math.random() * 0.2,
       path: [{ x, y }],
-      length: 0,
     });
   }
-  bursts.push({ x, y, color, radius: 0, alpha: 1, freq, tendrils });
+  bursts.push({
+    x, y,
+    freq,
+    baseHue,
+    radius: 0,
+    alpha: 1,
+    time: Date.now(),
+    hueShift: Math.random() * 360,
+    tendrils
+  });
 }
 
 canvas.addEventListener('click', (e) => {
@@ -68,7 +76,7 @@ canvas.addEventListener('click', (e) => {
 
 function drawTendril(t, color, intensity) {
   ctx.strokeStyle = color;
-  ctx.lineWidth = 1.5 + intensity * 2;
+  ctx.lineWidth = 1.2 + intensity * 3;
   ctx.beginPath();
   ctx.moveTo(t.path[0].x, t.path[0].y);
   for (let i = 1; i < t.path.length; i++) ctx.lineTo(t.path[i].x, t.path[i].y);
@@ -77,25 +85,30 @@ function drawTendril(t, color, intensity) {
 
 function update() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const now = Date.now();
 
   for (let i = bursts.length - 1; i >= 0; i--) {
     const b = bursts[i];
-    b.radius += 5 + Math.random() * 3;
-    b.alpha -= 0.012;
+    b.radius += 4 + Math.random() * 3;
+    b.alpha -= 0.01;
+    b.hueShift += 1.5;
+
     if (b.alpha <= 0) {
       bursts.splice(i, 1);
       continue;
     }
 
-    // draw expanding pulse
+    const color = dynamicColor(b.hueShift, b.baseHue, b.freq, b.alpha);
+
+    // pulse ring
     ctx.beginPath();
     ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-    ctx.strokeStyle = b.color;
+    ctx.strokeStyle = color;
     ctx.globalAlpha = b.alpha * 0.8;
-    ctx.lineWidth = 1.5 + Math.sin(b.freq * 0.01) * 0.5;
+    ctx.lineWidth = 2 + Math.sin(now * 0.008) * 2;
     ctx.stroke();
 
-    // lightning tendrils
+    // tendrils
     for (let t of b.tendrils) {
       const last = t.path[t.path.length - 1];
       const step = 5 + Math.random() * 5;
@@ -103,4 +116,11 @@ function update() {
       const ny = last.y + Math.sin(t.angle) * step;
       t.path.push({ x: nx, y: ny });
       if (Math.random() < 0.25) t.angle += (Math.random() - 0.5) * 0.5;
-      drawTendril(t, b.color, b.al
+      drawTendril(t, color, b.alpha);
+    }
+  }
+
+  ctx.globalAlpha = 1.0;
+  requestAnimationFrame(update);
+}
+update();
