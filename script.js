@@ -82,7 +82,7 @@ function createBurst(x, y, color) {
 function drawBurst(b, now) {
   const age = now - b.born;
   const t = age / b.life;
-  if (t >= 1) return false;
+  if (t >= 1) return true;
 
   // Ease in/out + radius growth
   const fadeIn = Math.min(t / 0.2, 1);
