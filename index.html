@@ -1,2 +1,60 @@
-<canvas id="fractalCanvas"></canvas>
-<script src="script.js"></script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fractal Piano Explorer</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: black;
+    color: cyan;
+    font-family: monospace;
+  }
+  #controlPanel {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    border: 2px solid cyan;
+    border-radius: 10px;
+    padding: 12px 20px;
+    background: rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 20px cyan;
+  }
+  h1 {
+    font-size: 1.5em;
+    margin: 0 0 10px;
+    color: cyan;
+  }
+  label {
+    display: inline-block;
+    width: 80px;
+  }
+  input[type="range"] {
+    width: 160px;
+  }
+  canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+  }
+</style>
+</head>
+<body>
+  <div id="controlPanel">
+    <h1>🎹 Fractal Piano Explorer</h1>
+    <div>
+      <label>Volume:</label>
+      <input id="volume" type="range" min="0" max="1" step="0.01" value="0.7">
+    </div>
+    <div style="margin-top:8px;">
+      <label>LFO Depth:</label>
+      <input id="lfo" type="range" min="0" max="1" step="0.01" value="0.25">
+    </div>
+  </div>
+
+  <canvas id="fractalCanvas"></canvas>
+  <script src="script.js"></script>
+</body>
+</html>
